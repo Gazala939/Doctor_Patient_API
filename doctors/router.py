@@ -46,6 +46,7 @@ def create_doctor(
         )
 
     new_doctor = Doctor(
+        user_id=doctor.user_id,
         name=doctor.name,
         specialization=doctor.specialization,
         email=doctor.email
@@ -217,7 +218,7 @@ def get_doctor_patients(
         )
 
     if payload["role"] == "Doctor":
-        if payload["user_id"] != doctor_id:
+        if doctor.user_id != payload["user_id"]:
             raise HTTPException(
                 status_code=403,
                 detail="Doctors can only view their own patients"
