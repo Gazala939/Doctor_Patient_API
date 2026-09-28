@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel, field_validator
 
 
@@ -5,6 +6,7 @@ class PatientCreate(BaseModel):
     name: str
     age: int
     phone: str
+    doctor_id: int
 
     @field_validator("age")
     @classmethod
@@ -16,10 +18,67 @@ class PatientCreate(BaseModel):
     @field_validator("phone")
     @classmethod
     def validate_phone(cls, value):
+
         if not value.isdigit():
             raise ValueError("Phone must contain only digits")
 
-        if not 10 <= len(value) <= 15:
-            raise ValueError("Phone must be 10 to 15 digits")
+        if len(value) != 10:
+            raise ValueError("Phone must be exactly 10 digits")
+
+        return value
+
+
+class PatientUpdate(BaseModel):
+    name: str
+    age: int
+    phone: str
+    doctor_id: int
+
+    @field_validator("age")
+    @classmethod
+    def validate_age(cls, value):
+        if value <= 0:
+            raise ValueError("Age must be greater than 0")
+        return value
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, value):
+
+        if not value.isdigit():
+            raise ValueError("Phone must contain only digits")
+
+        if len(value) != 10:
+            raise ValueError("Phone must be exactly 10 digits")
+
+        return value
+
+
+class PatientPatch(BaseModel):
+    name: Optional[str] = None
+    age: Optional[int] = None
+    phone: Optional[str] = None
+    doctor_id: Optional[int] = None
+
+    @field_validator("age")
+    @classmethod
+    def validate_age(cls, value):
+
+        if value is not None and value <= 0:
+            raise ValueError("Age must be greater than 0")
+
+        return value
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, value):
+
+        if value is not None:
+
+            if not value.isdigit():
+                raise ValueError("Phone must contain only digits")
+
+            if len(value) != 10:
+                raise ValueError("Phone must be exactly 10 digits")
 
         return value

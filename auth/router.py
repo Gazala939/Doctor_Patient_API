@@ -1,15 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
-from db import SessionLocal
+
+from db import get_db
 from models.user import User
 from schemas.user import UserCreate, UserLogin
 from auth.jwt import create_access_token, verify_token
+
 
 pwd_context = CryptContext(
     schemes=["bcrypt"],
     deprecated="auto"
 )
+
 
 router = APIRouter(
     prefix="/auth",
@@ -17,17 +20,12 @@ router = APIRouter(
 )
 
 
-def get_db():
-    db = SessionLocal()
-
-    try:
-        yield db
-    finally:
-        db.close()
-
 # Register
 @router.post("/register")
-def register(user: UserCreate, db: Session = Depends(get_db)):
+def register(
+    user: UserCreate,
+    db: Session = Depends(get_db)
+):
     existing_user = db.query(User).filter(
         User.email == user.email
     ).first()
@@ -39,7 +37,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
         )
 
     new_user = User(
-        name=user.name,
+        username=user.name,
         email=user.email,
         password=pwd_context.hash(user.password),
         role=user.role
@@ -54,10 +52,13 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
         "user_id": new_user.id
     }
 
-# Login  
-@router.post("/login")
-def login(user: UserLogin, db: Session = Depends(get_db)):
 
+# Login
+@router.post("/login")
+def login(
+    user: UserLogin,
+    db: Session = Depends(get_db)
+):
     existing_user = db.query(User).filter(
         User.email == user.email
     ).first()
@@ -69,28 +70,31 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         )
 
     if not pwd_context.verify(
-    user.password,
-    existing_user.password
+        user.password,
+        existing_user.password
     ):
-      raise HTTPException(
-        status_code=401,
-        detail="Invalid email or password"
-      )
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
 
     token = create_access_token({
-    "user_id": existing_user.id,
-    "role": existing_user.role
+        "user_id": existing_user.id,
+        "role": existing_user.role
     })
 
     return {
-    "message": "Login successful",
-    "access_token": token,
-    "token_type": "bearer"
+        "message": "Login successful",
+        "access_token": token,
+        "token_type": "bearer"
     }
-    
-@router.get("/protected")
-def protected_route(payload: dict = Depends(verify_token)):
 
+
+# Protected route
+@router.get("/protected")
+def protected_route(
+    payload: dict = Depends(verify_token)
+):
     return {
         "message": "You are authenticated",
         "user_id": payload["user_id"],

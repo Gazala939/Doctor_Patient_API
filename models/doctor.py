@@ -7,7 +7,11 @@ from db import Base
 class Doctor(Base):
     __tablename__ = "doctors"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
 
     user_id = Column(
         Integer,
@@ -16,13 +20,32 @@ class Doctor(Base):
         nullable=True
     )
 
-    name = Column(String(100), nullable=False)
-    specialization = Column(String(100), nullable=False)
-    email = Column(String(100), unique=True, nullable=False, index=True)
-    is_active = Column(Boolean, default=True)
+    name = Column(
+        String(100),
+        nullable=False
+    )
 
+    specialization = Column(
+        String(100),
+        nullable=False
+    )
+
+    email = Column(
+        String(100),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+
+    is_active = Column(
+        Boolean,
+        default=True
+    )
+
+    # Relationship with User
     user = relationship("User")
 
+    # Relationship with Patient
     patients = relationship(
         "Patient",
         back_populates="doctor"
