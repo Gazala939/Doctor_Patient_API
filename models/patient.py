@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 
 from db import Base
@@ -36,6 +36,26 @@ class Patient(Base):
     doctor_id = Column(
         Integer,
         ForeignKey("doctors.id"),
+        nullable=False
+    )
+
+    created_at = Column(
+        DateTime,
+        nullable=False
+    )
+
+    updated_at = Column(
+        DateTime,
+        nullable=False
+    )
+
+    created_by = Column(
+        Integer,
+        nullable=True
+    )
+
+    updated_by = Column(
+        Integer,
         nullable=True
     )
 
@@ -43,4 +63,10 @@ class Patient(Base):
     doctor = relationship(
         "Doctor",
         back_populates="patients"
+    )
+
+    # Relationship with Appointment
+    appointments = relationship(
+        "Appointment",
+        back_populates="patient"
     )

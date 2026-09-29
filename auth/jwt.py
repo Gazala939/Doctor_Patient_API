@@ -55,3 +55,19 @@ def verify_token(
             status_code=401,
             detail="Invalid or expired token"
         )
+        
+def require_role(required_role: str):
+
+    def role_checker(
+        payload: dict = Depends(verify_token)
+    ):
+
+        if payload.get("role") != required_role:
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden"
+            )
+
+        return payload
+
+    return role_checker

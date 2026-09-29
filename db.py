@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 
@@ -11,6 +11,14 @@ engine = create_engine(
     DATABASE_URL,
     connect_args={"check_same_thread": False}
 )
+
+
+# Enable SQLite foreign key constraints
+@event.listens_for(engine, "connect")
+def enable_foreign_keys(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
 
 
 # Create database session
@@ -33,6 +41,7 @@ def get_db():
         yield db
     finally:
         db.close()
-        
+
+
 def create_tables():
     Base.metadata.create_all(bind=engine)

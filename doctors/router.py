@@ -1,13 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+
 from db import get_db
 from models.doctor import Doctor
 from schemas.doctor import DoctorCreate, DoctorUpdate, DoctorPatch
-from auth.jwt import verify_token
+from auth.jwt import verify_token, require_role
 from models.patient import Patient
+
 from services.doctor_service import (
     get_doctor_by_id,
-    create_doctor  as create_doctor_service,
+    create_doctor as create_doctor_service,
     update_doctor as update_doctor_service,
     patch_doctor as patch_doctor_service,
     delete_doctor as delete_doctor_service,
@@ -15,24 +17,29 @@ from services.doctor_service import (
     get_doctor_patients as get_doctor_patients_service
 )
 
+from schemas.appointment import AppointmentResponse
+from services.appointment_service import (
+    get_doctor_appointments as get_doctor_appointments_service
+)
+
+
 router = APIRouter(
     prefix="/doctors",
     tags=["Doctors"]
 )
 
 
-@router.post("/")
+# Create doctor
+@router.post(
+    "/",
+    summary="Create doctor",
+    description="Creates a new doctor. Only Admin users are allowed."
+)
 def create_doctor(
     doctor: DoctorCreate,
     db: Session = Depends(get_db),
-    payload: dict = Depends(verify_token)
+    payload: dict = Depends(require_role("Admin"))
 ):
-
-    if payload["role"] != "Admin":
-        raise HTTPException(
-            status_code=403,
-            detail="Only Admin can create doctors"
-        )
 
     existing_doctor = db.query(Doctor).filter(
         Doctor.email == doctor.email
@@ -49,7 +56,8 @@ def create_doctor(
         user_id=doctor.user_id,
         name=doctor.name,
         specialization=doctor.specialization,
-        email=doctor.email
+        email=doctor.email,
+        created_by=payload["user_id"]
     )
 
     return {
@@ -57,9 +65,13 @@ def create_doctor(
         "doctor_id": new_doctor.id
     }
 
-  
-# get all doctors / filter / pagination
-@router.get("/")
+
+# Get all doctors / filter / pagination
+@router.get(
+    "/",
+    summary="Get all doctors",
+    description="Returns a paginated list of doctors with optional specialization and active-status filters."
+)
 def get_doctors(
     specialization: str = None,
     is_active: bool = None,
@@ -71,21 +83,21 @@ def get_doctors(
 
     query = db.query(Doctor)
 
-    # filter by specialization
+    # Filter by specialization
     if specialization:
         query = query.filter(
             Doctor.specialization == specialization
         )
 
-    # filter by active status
+    # Filter by active status
     if is_active is not None:
         query = query.filter(
             Doctor.is_active == is_active
         )
-        
+
     total = query.count()
 
-    # pagination
+    # Pagination
     offset = (page - 1) * limit
 
     doctors = query.offset(offset).limit(limit).all()
@@ -97,8 +109,13 @@ def get_doctors(
         "data": doctors
     }
 
-# get doctor by id
-@router.get("/{doctor_id}")
+
+# Get doctor by ID
+@router.get(
+    "/{doctor_id}",
+    summary="Get doctor by ID",
+    description="Returns details of a specific doctor."
+)
 def get_doctor(
     doctor_id: int,
     db: Session = Depends(get_db),
@@ -118,20 +135,19 @@ def get_doctor(
 
     return doctor
 
-# update doctor
-@router.put("/{doctor_id}")
+
+# Update doctor
+@router.put(
+    "/{doctor_id}",
+    summary="Update doctor",
+    description="Updates all details of a doctor. Only Admin users are allowed."
+)
 def update_doctor(
     doctor_id: int,
     doctor_data: DoctorUpdate,
     db: Session = Depends(get_db),
-    payload: dict = Depends(verify_token)
+    payload: dict = Depends(require_role("Admin"))
 ):
-
-    if payload["role"] != "Admin":
-        raise HTTPException(
-            status_code=403,
-            detail="Only Admin can update doctors"
-        )
 
     doctor = db.query(Doctor).filter(
         Doctor.id == doctor_id
@@ -142,7 +158,7 @@ def update_doctor(
             status_code=404,
             detail="Doctor not found"
         )
-        
+
     existing_doctor = db.query(Doctor).filter(
         Doctor.email == doctor_data.email,
         Doctor.id != doctor_id
@@ -159,28 +175,28 @@ def update_doctor(
         doctor=doctor,
         name=doctor_data.name,
         specialization=doctor_data.specialization,
-        email=doctor_data.email
-    ) 
+        email=doctor_data.email,
+        user_id=payload["user_id"]
+    )
 
     return {
         "message": "Doctor updated successfully",
         "doctor_id": doctor.id
     }
-    
-# update doctor -patch
-@router.patch("/{doctor_id}")
+
+
+# Update doctor - PATCH
+@router.patch(
+    "/{doctor_id}",
+    summary="Partially update doctor",
+    description="Updates selected doctor fields. Only Admin users are allowed."
+)
 def patch_doctor(
     doctor_id: int,
     doctor_data: DoctorPatch,
     db: Session = Depends(get_db),
-    payload: dict = Depends(verify_token)
+    payload: dict = Depends(require_role("Admin"))
 ):
-
-    if payload["role"] != "Admin":
-        raise HTTPException(
-            status_code=403,
-            detail="Only Admin can update doctors"
-        )
 
     doctor = db.query(Doctor).filter(
         Doctor.id == doctor_id
@@ -212,27 +228,27 @@ def patch_doctor(
         doctor=doctor,
         name=doctor_data.name,
         specialization=doctor_data.specialization,
-        email=doctor_data.email
+        email=doctor_data.email,
+        user_id=payload["user_id"]
     )
 
     return {
         "message": "Doctor partially updated successfully",
         "doctor_id": doctor.id
     }
-  
-# delete doctor:soft delete
-@router.delete("/{doctor_id}")
+
+
+# Delete doctor - soft delete
+@router.delete(
+    "/{doctor_id}",
+    summary="Deactivate doctor",
+    description="Soft deletes a doctor by setting is_active to false. Only Admin users are allowed."
+)
 def delete_doctor(
     doctor_id: int,
     db: Session = Depends(get_db),
-    payload: dict = Depends(verify_token)
+    payload: dict = Depends(require_role("Admin"))
 ):
-
-    if payload["role"] != "Admin":
-        raise HTTPException(
-            status_code=403,
-            detail="Only Admin can delete doctors"
-        )
 
     doctor = db.query(Doctor).filter(
         Doctor.id == doctor_id
@@ -246,7 +262,8 @@ def delete_doctor(
 
     doctor = delete_doctor_service(
         db=db,
-        doctor=doctor
+        doctor=doctor,
+        user_id=payload["user_id"]
     )
 
     return {
@@ -254,19 +271,19 @@ def delete_doctor(
         "doctor_id": doctor.id
     }
 
-# assisn patient to doctor:
-@router.post("/{doctor_id}/patients/{patient_id}")
+
+# Assign patient to doctor
+@router.post(
+    "/{doctor_id}/patients/{patient_id}",
+    summary="Assign patient to doctor",
+    description="Assigns an existing patient to an active doctor. Only Admin users are allowed."
+)
 def assign_patient_to_doctor(
     doctor_id: int,
     patient_id: int,
     db: Session = Depends(get_db),
-    payload: dict = Depends(verify_token)
+    payload: dict = Depends(require_role("Admin"))
 ):
-    if payload["role"] != "Admin":
-        raise HTTPException(
-            status_code=403,
-            detail="Only Admin can assign patients"
-        )
 
     doctor = db.query(Doctor).filter(
         Doctor.id == doctor_id
@@ -277,7 +294,7 @@ def assign_patient_to_doctor(
             status_code=404,
             detail="Doctor not found"
         )
-        
+
     if not doctor.is_active:
         raise HTTPException(
             status_code=400,
@@ -305,14 +322,20 @@ def assign_patient_to_doctor(
         "doctor_id": doctor_id,
         "patient_id": patient_id
     }
-    
-# get all patients of doctor
-@router.get("/{doctor_id}/patients")
+
+
+# Get all patients of doctor
+@router.get(
+    "/{doctor_id}/patients",
+    summary="Get doctor's patients",
+    description="Returns patients assigned to a specific doctor."
+)
 def get_doctor_patients(
     doctor_id: int,
     db: Session = Depends(get_db),
     payload: dict = Depends(verify_token)
 ):
+
     doctor = db.query(Doctor).filter(
         Doctor.id == doctor_id
     ).first()
@@ -322,13 +345,14 @@ def get_doctor_patients(
             status_code=404,
             detail="Doctor not found"
         )
-        
+
     if not doctor.is_active:
         raise HTTPException(
-           status_code=400,
-           detail="Doctor is inactive"
-        ) 
-# doctor can only see their own patients
+            status_code=400,
+            detail="Doctor is inactive"
+        )
+
+    # Doctor can only see their own patients
     if payload["role"] == "Doctor":
         if doctor.user_id != payload["user_id"]:
             raise HTTPException(
@@ -342,3 +366,33 @@ def get_doctor_patients(
     )
 
     return patients
+
+
+# Get appointments for a doctor
+@router.get(
+    "/{doctor_id}/appointments",
+    summary="Get doctor's appointments",
+    description="Returns all appointments belonging to a specific doctor."
+)
+def get_doctor_appointments(
+    doctor_id: int,
+    db: Session = Depends(get_db),
+    payload: dict = Depends(verify_token)
+):
+
+    doctor = db.query(Doctor).filter(
+        Doctor.id == doctor_id
+    ).first()
+
+    if not doctor:
+        raise HTTPException(
+            status_code=404,
+            detail="Doctor not found"
+        )
+
+    appointments = get_doctor_appointments_service(
+        db=db,
+        doctor_id=doctor_id
+    )
+
+    return appointments

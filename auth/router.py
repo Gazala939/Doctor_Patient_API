@@ -21,7 +21,19 @@ router = APIRouter(
 
 
 # Register
-@router.post("/register")
+@router.post(
+    "/register",
+    summary="Register a new user",
+    description="Creates a new user account with a hashed password and assigned role.",
+    responses={
+        200: {
+            "description": "User registered successfully"
+        },
+        400: {
+            "description": "Email already registered"
+        }
+    }
+)
 def register(
     user: UserCreate,
     db: Session = Depends(get_db)
@@ -54,7 +66,19 @@ def register(
 
 
 # Login
-@router.post("/login")
+@router.post(
+    "/login",
+    summary="Login user",
+    description="Authenticates a user and returns a JWT access token.",
+    responses={
+        200: {
+            "description": "Login successful"
+        },
+        401: {
+            "description": "Invalid email or password"
+        }
+    }
+)
 def login(
     user: UserLogin,
     db: Session = Depends(get_db)
@@ -91,7 +115,19 @@ def login(
 
 
 # Protected route
-@router.get("/protected")
+@router.get(
+    "/protected",
+    summary="Check authentication",
+    description="Returns information about the currently authenticated user.",
+    responses={
+        200: {
+            "description": "User is authenticated"
+        },
+        401: {
+            "description": "Authentication required"
+        }
+    }
+)
 def protected_route(
     payload: dict = Depends(verify_token)
 ):

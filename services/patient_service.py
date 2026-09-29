@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-
 from models.patient import Patient
+from datetime import datetime
 
 
 def get_patient_by_id(
@@ -10,19 +10,27 @@ def get_patient_by_id(
     return db.query(Patient).filter(
         Patient.id == patient_id
     ).first()
-    
+
+
 def create_patient(
     db: Session,
     name: str,
     age: int,
     phone: str,
-    doctor_id: int
+    doctor_id: int,
+    user_id: int
 ):
+    current_time = datetime.utcnow()
+
     new_patient = Patient(
         name=name,
         age=age,
         phone=phone,
-        doctor_id=doctor_id
+        doctor_id=doctor_id,
+        created_at=current_time,
+        updated_at=current_time,
+        created_by=user_id,
+        updated_by=user_id
     )
 
     db.add(new_patient)
@@ -31,23 +39,29 @@ def create_patient(
 
     return new_patient
 
+
 def update_patient(
     db: Session,
     patient,
     name: str,
     age: int,
     phone: str,
-    doctor_id: int
+    doctor_id: int,
+    user_id: int
 ):
     patient.name = name
     patient.age = age
     patient.phone = phone
     patient.doctor_id = doctor_id
 
+    patient.updated_at = datetime.utcnow()
+    patient.updated_by = user_id
+
     db.commit()
     db.refresh(patient)
 
     return patient
+
 
 def patch_patient(
     db: Session,
@@ -55,7 +69,8 @@ def patch_patient(
     name=None,
     age=None,
     phone=None,
-    doctor_id=None
+    doctor_id=None,
+    user_id: int = None
 ):
     if name is not None:
         patient.name = name
@@ -69,21 +84,30 @@ def patch_patient(
     if doctor_id is not None:
         patient.doctor_id = doctor_id
 
+    patient.updated_at = datetime.utcnow()
+    patient.updated_by = user_id
+
     db.commit()
     db.refresh(patient)
 
     return patient
+
 
 def delete_patient(
     db: Session,
-    patient
+    patient,
+    user_id: int
 ):
     patient.is_active = False
+
+    patient.updated_at = datetime.utcnow()
+    patient.updated_by = user_id
 
     db.commit()
     db.refresh(patient)
 
     return patient
+
 
 def get_patients(
     db: Session,

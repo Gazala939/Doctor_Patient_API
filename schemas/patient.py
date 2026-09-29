@@ -27,6 +27,16 @@ class PatientCreate(BaseModel):
 
         return value
 
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "Rahul Sharma",
+                "age": 35,
+                "phone": "9876543210",
+                "doctor_id": 1
+            }
+        }
+
 
 class PatientUpdate(BaseModel):
     name: str
@@ -52,6 +62,16 @@ class PatientUpdate(BaseModel):
             raise ValueError("Phone must be exactly 10 digits")
 
         return value
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "Rahul Sharma",
+                "age": 36,
+                "phone": "9876543210",
+                "doctor_id": 1
+            }
+        }
 
 
 class PatientPatch(BaseModel):
@@ -82,3 +102,10 @@ class PatientPatch(BaseModel):
                 raise ValueError("Phone must be exactly 10 digits")
 
         return value
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "age": 36
+            }
+        }

@@ -12,7 +12,11 @@ from services.patient_service import (
     patch_patient as patch_patient_service,
     delete_patient as delete_patient_service,
     get_patients as get_patients_service
+)
 
+from schemas.appointment import AppointmentResponse
+from services.appointment_service import (
+    get_patient_appointments as get_patient_appointments_service
 )
 
 router = APIRouter(
@@ -20,12 +24,23 @@ router = APIRouter(
     tags=["Patients"]
 )
 
-@router.post("/")
+@router.post(
+    "/",
+    summary="Create patient",
+    description="Creates a new patient and assigns the patient to an active doctor. Only Admin users are allowed."
+)
 def create_patient(
     patient: PatientCreate,
     db: Session = Depends(get_db),
     payload: dict = Depends(verify_token)
 ):
+    
+    # Only Admin can create patients
+    if payload["role"] != "Admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Only Admin can create patients"
+        )
 
     # Check whether doctor exists
     doctor = db.query(Doctor).filter(
@@ -51,8 +66,9 @@ def create_patient(
         name=patient.name,
         age=patient.age,
         phone=patient.phone,
-        doctor_id=patient.doctor_id
-)
+        doctor_id=patient.doctor_id,
+        user_id=payload["user_id"]
+    )
 
     return {
         "message": "Patient created successfully",
@@ -60,7 +76,11 @@ def create_patient(
         "doctor_id": new_patient.doctor_id
     }
     
-@router.put("/{patient_id}")
+@router.put(
+    "/{patient_id}",
+    summary="Update patient",
+    description="Updates all details of an existing patient. Only Admin users are allowed."
+)
 def update_patient(
     patient_id: int,
     patient_data: PatientUpdate,
@@ -111,7 +131,8 @@ def update_patient(
         name=patient_data.name,
         age=patient_data.age,
         phone=patient_data.phone,
-        doctor_id=patient_data.doctor_id
+        doctor_id=patient_data.doctor_id,
+        user_id=payload["user_id"]
     )
 
     return {
@@ -120,7 +141,11 @@ def update_patient(
         "doctor_id": patient.doctor_id
     }
 
-@router.patch("/{patient_id}")
+@router.patch(
+    "/{patient_id}",
+    summary="Partially update patient",
+    description="Updates selected patient fields. Only Admin users are allowed."
+)
 def patch_patient(
     patient_id: int,
     patient_data: PatientPatch,
@@ -172,15 +197,20 @@ def patch_patient(
         name=patient_data.name,
         age=patient_data.age,
         phone=patient_data.phone,
-        doctor_id=patient_data.doctor_id
-        )
+        doctor_id=patient_data.doctor_id,
+        user_id=payload["user_id"]
+    )
     return {
         "message": "Patient partially updated successfully",
         "patient_id": patient.id,
         "doctor_id": patient.doctor_id
     }
 
-@router.delete("/{patient_id}")
+@router.delete(
+    "/{patient_id}",
+    summary="Deactivate patient",
+    description="Soft deletes a patient by setting is_active to false. Only Admin users are allowed."
+)
 def delete_patient(
     patient_id: int,
     db: Session = Depends(get_db),
@@ -208,7 +238,8 @@ def delete_patient(
     # Soft delete
     patient = delete_patient_service(
         db=db,
-        patient=patient
+        patient=patient,
+        user_id=payload["user_id"]
     )
 
     return {
@@ -216,7 +247,11 @@ def delete_patient(
         "patient_id": patient.id
     }
     
-@router.get("/")
+@router.get(
+    "/",
+    summary="Get all patients",
+    description="Returns a paginated list of patients with an optional age filter."
+)
 def get_patients(
     age_gt: int = None,
     page: int = Query(1, ge=1),
@@ -245,7 +280,11 @@ def get_patients(
     }
     
     
-@router.get("/{patient_id}")
+@router.get(
+    "/{patient_id}",
+    summary="Get patient by ID",
+    description="Returns a specific patient. Admins can view any patient, while Doctors can view only their assigned patients."
+)
 def get_patient(
     patient_id: int,
     db: Session = Depends(get_db),
@@ -292,3 +331,32 @@ def get_patient(
         status_code=403,
         detail="You are not authorized to view this patient"
     )
+    
+# Get appointments for a patient
+@router.get(
+    "/{patient_id}/appointments",
+    summary="Get patient's appointments",
+    description="Returns all appointments belonging to a specific patient."
+)
+def get_patient_appointments(
+    patient_id: int,
+    db: Session = Depends(get_db),
+    payload: dict = Depends(verify_token)
+):
+
+    patient = db.query(Patient).filter(
+        Patient.id == patient_id
+    ).first()
+
+    if not patient:
+        raise HTTPException(
+            status_code=404,
+            detail="Patient not found"
+        )
+
+    appointments = get_patient_appointments_service(
+        db=db,
+        patient_id=patient_id
+    )
+
+    return appointments
