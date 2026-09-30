@@ -61,6 +61,7 @@ class Doctor(Base):
         Integer,
         nullable=True
     )
+    
 
     # Relationship with User
     user = relationship("User")
@@ -68,6 +69,11 @@ class Doctor(Base):
     # Relationship with Patient
     patients = relationship(
         "Patient",
+        back_populates="doctor"
+    )
+    
+    billings = relationship(
+        "Billing",
         back_populates="doctor"
     )
     

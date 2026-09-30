@@ -325,5 +325,100 @@ The screenshots demonstrate:
     * Validation errors
     * Swagger documentation
 
+## Billing
 
-# 
+The Billing module manages patient billing and payment information.
+
+Billing APIs support:
+
+    * Create billing
+    * Get billing by ID
+    * Get all billings
+    * Get billings for a patient
+    * Get billings for a doctor
+    * Update billing using PUT
+    * Partial update using PATCH
+    * Soft delete billing
+    * Billing filters
+    * Pagination
+    * Revenue reports
+
+### Billing Fields
+
+Each billing record contains:
+
+    * Patient ID
+    * Doctor ID
+    * Appointment ID
+    * Consultation fee
+    * Additional charges
+    * Total amount
+    * Payment status
+    * Payment mode
+    * Active status
+    * Created and updated timestamps
+
+### Billing Validation
+
+The API validates:
+
+    * Patient must exist and be active
+    * Doctor must exist and be active
+    * Appointment must belong to the selected doctor and patient
+    * Billing cannot be created for a cancelled appointment
+    * Duplicate billing for the same appointment is prevented
+    * Total amount is calculated automatically
+
+### Payment Status
+
+Supported payment statuses:
+
+    * pending
+    * paid
+    * cancelled
+
+Supported payment modes:
+
+    * cash
+    * card
+    * upi
+
+### Billing Authorization
+
+Admin users can:
+
+    * Create billing
+    * View billing
+    * Update billing
+    * Patch billing
+    * Delete billing
+
+Doctor users can:
+
+    * View billings related to their patients
+
+Doctors cannot delete billing records.
+
+### Revenue Reports
+
+The API provides revenue reports including:
+
+    * Total revenue
+    * Revenue per doctor
+    * Revenue per day
+
+Example:
+
+GET /reports/revenue
+
+The revenue report supports filtering by:
+
+    * Doctor ID
+    * From date
+    * To date
+
+### Billing Soft Delete
+
+Billing records are soft deleted using:
+
+is_active = False

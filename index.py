@@ -8,12 +8,14 @@ from db import Base, engine
 from models.user import User
 from models.doctor import Doctor
 from models.patient import Patient
+from models.billing import Billing
 from models.appointment import Appointment
 
 from auth.router import router as auth_router
 from doctors.router import router as doctor_router
 from patients.router import router as patient_router
 from appointments.router import router as appointment_router
+from billings.router import router as billing_router
 
 import time
 
@@ -170,6 +172,7 @@ app.include_router(auth_router)
 app.include_router(doctor_router)
 app.include_router(patient_router)
 app.include_router(appointment_router)
+app.include_router(billing_router)
 
 
 @app.get("/")

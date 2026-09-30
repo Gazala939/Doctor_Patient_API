@@ -63,6 +63,12 @@ class Appointment(Base):
         "Doctor",
         back_populates="appointments"
     )
+    
+    billing = relationship(
+        "Billing",
+        back_populates="appointment",
+        uselist=False
+    )
 
     patient = relationship(
         "Patient",
